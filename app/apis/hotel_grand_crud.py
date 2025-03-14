@@ -1,10 +1,8 @@
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from databases.postgresql import get_db
-from models.bases.object_base import Object
-from models.bases.datapoint_base import Datapoint
-from models.objects.hotel_grand_objects import Building, Floor, Room, Device
+from app.models.objects.hotel_grand_objects import Building, Floor
 from pydantic import BaseModel
 from datetime import datetime
 

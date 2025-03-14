@@ -1,24 +1,49 @@
-CREATE TABLE objects (
-    id BIGSERIAL PRIMARY KEY,
+-----------------object-------------------------------
+CREATE TABLE object (
+    object_id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    type VARCHAR(50) NOT NULL CHECK (type IN ('building', 'floor', 'room', 'device')),
-    location_details JSONB,
-    parent_object_id BIGINT,
+    type VARCHAR(50) NOT NULL, -- building, floor, room, device, etc.
+    parent_id INTEGER REFERENCES object(object_id),
+    location_details JSONB, -- flexible storage for address, coordinates, etc.
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_parent_object FOREIGN KEY (parent_object_id)
-        REFERENCES objects(object_id) ON DELETE CASCADE
+    attributes JSONB -- for additional flexible attributes
 );
 
+-- Index for faster hierarchical queries
+CREATE INDEX idx_object_parent_id ON object(parent_id);
+CREATE INDEX idx_object_type ON object(type);
 
-CREATE TABLE datapoints (
-    datapoint_id BIGSERIAL PRIMARY KEY,
-    object_FK BIGINT NOT NULL,
-    value VARCHAR(255) NOT NULL,
-    unit VARCHAR(50),
-    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+-----------------------datapoint--------------------------------
+CREATE TABLE datapoint (
+    datapoint_id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    unit VARCHAR(50), -- e.g., "°C", "kWh", "m²"
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT object_FK FOREIGN KEY (object_FK)
-        REFERENCES objects(id) ON DELETE CASCADE
+    value TEXT -- added as requested
 );
+
+-- Index for faster lookups
+CREATE INDEX idx_datapoint_name ON datapoint(name);
+
+
+-----------object_datapoint-----------------
+CREATE TABLE object_datapoint (
+    object_datapoint_id SERIAL PRIMARY KEY,
+    object_id INTEGER REFERENCES object(object_id) ON DELETE CASCADE,
+    datapoint_id INTEGER REFERENCES datapoint(datapoint_id) ON DELETE CASCADE,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_fresh BOOLEAN DEFAULT TRUE, -- flag for data freshness
+    metadata JSONB, -- additional data like confidence scores, source information
+
+    CONSTRAINT unique_object_datapoint UNIQUE (object_id, datapoint_id)
+);
+
+-- Indexes for faster queries
+CREATE INDEX idx_od_object_id ON object_datapoint(object_id);
+CREATE INDEX idx_od_datapoint_id ON object_datapoint(datapoint_id);
+CREATE INDEX idx_od_last_updated ON object_datapoint(last_updated);
+CREATE INDEX idx_od_is_fresh ON object_datapoint(is_fresh);

@@ -1,4 +1,4 @@
-from models.bases.object_base import Object
+from app.models.bases.object_base import Object
 
 
 class Building(Object):
