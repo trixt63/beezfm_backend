@@ -5,7 +5,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.models import DatapointCreate, DatapointUpdate, DatapointInDB
+from app.models.pydantic_models import DatapointCreate, DatapointUpdate, DatapointInDB
 
 router = APIRouter(prefix="/api/datapoints")
 

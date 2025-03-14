@@ -5,11 +5,11 @@ from typing import List, Dict, Optional
 from datetime import datetime
 
 from app.database import get_db
-from app.models.models import (
-    Object,
+from app.models.sql_alchemy_models import Object, Datapoint
+from app.models.pydantic_models import (
+    ObjectBase,
     ObjectCreate, ObjectUpdate, ObjectInDB,
-    ObjectWithChildren, ObjectWithDatapoints, ObjectWithRelations,
-    Datapoint
+    ObjectWithRelations,
 )
 
 router = APIRouter(prefix="/api/objects")
@@ -24,7 +24,7 @@ async def create_object(object_data: ObjectCreate, db: Session = Depends(get_db)
         raise HTTPException(status_code=400, detail=f"Invalid type. Must be one of: {', '.join(valid_types)}")
 
     if object_data.parent_object_id:
-        parent = db.query(Object).filter(Object.id == object_data.parent_object_id).first()
+        parent = db.query(ObjectBase).filter(Object.id == object_data.parent_object_id).first()
         if not parent:
             raise HTTPException(status_code=400, detail="Parent object does not exist")
 
@@ -59,9 +59,9 @@ def get_objects(
 
     # Filter by parent_id
     if parent_id is not None:
-        query = query.filter(Object.parent_object_id == parent_id)
+        query = query.filter(Object.parent_id == parent_id)
     else:
-        query = query.filter(Object.parent_object_id == None)
+        query = query.filter(Object.parent_id == None)
 
     # Filter by type
     if type is not None:
@@ -93,14 +93,14 @@ def get_object(
         "name": _object.name,
         "type": _object.type,
         "location_details": _object.location_details,
-        "parent_object_id": _object.parent_object_id,
+        "parent_object_id": _object.parent_id,
         "created_at": _object.created_at,
         "updated_at": _object.updated_at
     }
 
     # Include children if requested
     if include_children:
-        children = db.query(Object).filter(Object.parent_object_id == object_id).all()
+        children = db.query(Object).filter(Object.parent_id == object_id).all()
         result["children"] = children
 
     # Include datapoints if requested
@@ -142,7 +142,7 @@ def update_object(
         object.location_details = object_data.location_details
 
     if object_data.parent_object_id is not None:
-        object.parent_object_id = object_data.parent_object_id
+        object.parent_id = object_data.parent_object_id
 
     object.updated_at = datetime.now()
 
