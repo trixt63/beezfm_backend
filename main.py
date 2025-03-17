@@ -1,7 +1,13 @@
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+
 from app.apis import objects, datapoints
+
+load_dotenv()
 
 app = FastAPI(
     title="Hotel Monitoring System API",
@@ -29,4 +35,4 @@ async def root():
 if __name__ == "__main__":
     import uvicorn
     # uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host=os.getenv("API_HOST", "0.0.0.0"), port=int(os.getenv("API_PORT", 8000)), reload=True)

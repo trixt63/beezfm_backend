@@ -21,10 +21,6 @@ router = APIRouter(prefix="/api/objects")
 
 @router.get("/tree")
 def get_objects(
-        parent_id: Optional[int] = None,
-        type: Optional[str] = None,
-        limit: int = Query(100, ge=1, le=1000),
-        offset: int = Query(0, ge=0),
         db: Session = Depends(get_db)
 ):
     """
@@ -257,6 +253,7 @@ async def query_subtree(object_id: int, path: str, db: Session = Depends(get_db)
         subtree = build_subtree_with_datapoints(objects, object_id)
 
         # Resolve the path within the subtree
+        # TODO: fix resolve_path_by_type
         result = resolve_path_by_type(subtree, path)
 
         if result is None:
@@ -268,3 +265,5 @@ async def query_subtree(object_id: int, path: str, db: Session = Depends(get_db)
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# TODO: add get subtree api
