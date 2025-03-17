@@ -22,6 +22,7 @@ CREATE TABLE public.datapoint (
 	created_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
 	updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
 	is_fresh bool DEFAULT true NULL,
+	"type" varchar(255) NULL,
 	CONSTRAINT datapoint_pkey PRIMARY KEY (id)
 );
 CREATE INDEX idx_datapoint_name ON public.datapoint USING btree (name);
