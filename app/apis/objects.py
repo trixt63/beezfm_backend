@@ -15,35 +15,7 @@ from app.models.pydantic_models import (
 router = APIRouter(prefix="/api/objects")
 
 
-@router.post("/", response_model=ObjectInDB, status_code=201)
-async def create_object(object_data: ObjectCreate, db: Session = Depends(get_db)):
-    """Create a new object in the hierarchy"""
-    # Validate object type
-    valid_types = ['building', 'floor', 'room', 'device']
-    if object_data.type not in valid_types:
-        raise HTTPException(status_code=400, detail=f"Invalid type. Must be one of: {', '.join(valid_types)}")
-
-    if object_data.parent_object_id:
-        parent = db.query(ObjectBase).filter(Object.id == object_data.parent_object_id).first()
-        if not parent:
-            raise HTTPException(status_code=400, detail="Parent object does not exist")
-
-        # Create object
-    new_object = Object(
-        name=object_data.name,
-        type=object_data.type,
-        location_details=object_data.location_details,
-        parent_object_id=object_data.parent_object_id
-    )
-
-    db.add(new_object)
-    db.commit()
-    db.refresh(new_object)
-
-    return new_object
-
-
-@router.get("/", response_model=List[ObjectInDB])
+@router.get("/list")
 def get_objects(
         parent_id: Optional[int] = None,
         type: Optional[str] = None,
@@ -55,22 +27,35 @@ def get_objects(
     Get objects with optional filtering by parent_id or type.
     If parent_id is not provided, returns top-level objects.
     """
-    query = db.query(Object)
+    mock_return = [{
+        'id': 1,
+        'name': 'Building 1',
+        'type': 'building',
+        'pare'
+        'children': [
+            [
+                {
+                    "id": 2,
+                    "name": "Floor 1",
+                    "type": "floor",
+                    "parent_id": 1,
+                    "children": [
+                        {
+                            "id": 3,
+                            "name": "Room 101",
+                            "type": "room",
+                            "parent_id": 2,
+                            "children": [],
+                            "datapoints": []
+                        }
+                    ],
+                    "datapoints": []
+                }
+            ],
+        ],
+    }]
 
-    # Filter by parent_id
-    if parent_id is not None:
-        query = query.filter(Object.parent_id == parent_id)
-    else:
-        query = query.filter(Object.parent_id == None)
-
-    # Filter by type
-    if type is not None:
-        query = query.filter(Object.type == type)
-
-    # Add pagination
-    objects = query.order_by(Object.name).limit(limit).offset(offset).all()
-
-    return objects
+    return mock_return
 
 
 @router.get("/{object_id}", response_model=ObjectWithRelations)
@@ -220,69 +205,6 @@ async def query_by_path(
         raise HTTPException(status_code=400, detail="Invalid path format")
 
     # Start with the root object
-    query = """
-    WITH RECURSIVE object_hierarchy AS (
-        -- Start with objects matching the first segment
-        SELECT id, name, type, parent_object_id, location_details, created_at, updated_at, 1 as level, 
-               ARRAY[id] as path_ids
-        FROM objects
-        WHERE name = $1 AND parent_object_id IS NULL
 
-        UNION ALL
-
-        -- Join with child objects matching the next segment
-        SELECT o.id, o.name, o.type, o.parent_object_id, o.location_details, o.created_at, o.updated_at, 
-               oh.level + 1, oh.path_ids || o.id
-        FROM objects o
-        JOIN object_hierarchy oh ON o.parent_object_id = oh.id
-        WHERE oh.level < $3
-    )
-    -- Get objects at the final level with the correct path
-    SELECT DISTINCT ON (path_ids) id, name, type, parent_object_id, location_details, created_at, updated_at
-    FROM object_hierarchy
-    WHERE level = $3 AND name = $2
-    """
-
-    # rows = await conn.fetch(query,
-    #                         path_segments[0],
-    #                         path_segments[-1],
-    #                         len(path_segments)
-    #                         )
-    rows = db.query(query)
-
-    # Now we need to verify complete paths match
-    if len(path_segments) > 2:
-        result = []
-        # For each potential match, verify the complete path
-        for row in rows:
-            # Check if this path matches all segments
-            is_valid_path = True
-            object_id = row['id']
-
-            # Get the full path for this object
-            path_query = """
-            WITH RECURSIVE object_path AS (
-                SELECT id, name, parent_object_id, ARRAY[name] as path
-                FROM objects
-                WHERE id = $1
-
-                UNION ALL
-
-                SELECT o.id, o.name, o.parent_object_id, o.name || op.path
-                FROM objects o
-                JOIN object_path op ON o.id = op.parent_object_id
-            )
-            SELECT array_to_string(path, '.') as full_path
-            FROM object_path
-            WHERE parent_object_id IS NULL
-            """
-
-            full_path = db.query(path_query)
-
-            # Compare with requested path
-            if full_path == path:
-                result.append(dict(row))
-
-        return result
 
     return [dict(row) for row in rows]
