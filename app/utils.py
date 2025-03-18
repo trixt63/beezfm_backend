@@ -78,6 +78,7 @@ def build_subtree_with_datapoints(objects_list, root_id=None):
 # Updated path resolution using type
 def resolve_path_by_type(objects, path: str) -> Union[dict, List[dict], None]:
     parts = path.split('.')
+    datapoint_type = parts.pop()
     current_level = objects
 
     # Traverse the path for object types
@@ -87,16 +88,16 @@ def resolve_path_by_type(objects, path: str) -> Union[dict, List[dict], None]:
 
         for obj in current_level:
             if obj["type"].lower() == part.lower():
-                if is_last and not any(p["type"].lower() == part.lower() for p in obj["datapoints"]):
-                    # Path ends with object type
-                    next_level.append(obj)
-                elif not is_last:
+                # if is_last and not any(p["type"].lower() == part.lower() for p in obj["datapoints"]):
+                #     # Path ends with object type
+                #     next_level.append(obj)
+                if not is_last:
                     # Continue traversing children
                     children = [o for o in objects if o.get("parent_id") == obj["id"]]
                     next_level.extend(children)
-            if is_last and any(p["type"].lower() == part.lower() for p in obj["datapoints"]):
+            if is_last and any(p["type"].lower() == datapoint_type.lower() for p in obj["datapoints"]):
                 # Path ends with datapoint type
-                datapoints = [dp for dp in obj["datapoints"] if dp["type"].lower() == part.lower()]
+                datapoints = [dp for dp in obj["datapoints"] if dp["type"].lower() == datapoint_type.lower()]
                 return datapoints
 
         if not next_level and not is_last:
