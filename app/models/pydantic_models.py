@@ -18,8 +18,9 @@ class ObjectCreate(ObjectBase):
 class ObjectUpdate(BaseModel):
     """Model for updating an existing object"""
     name: Optional[str] = None
-    location_details: Optional[Dict[str, Any]] = None
+    type: Optional[str] = None
     parent_object_id: Optional[int] = None
+    location_details: Optional[Dict[str, Any]] = None
 
 class ObjectInDB(ObjectBase):
     """Model for object as stored in the database"""

@@ -89,45 +89,46 @@ def get_object(
 
     return result
 
-# @router.put("/{object_id}", response_model=ObjectInDB)
-# def update_object(
-#         object_id: int = Path(..., title="The ID of the object to update"),
-#         object_data: ObjectUpdate = None,
-#         db: Session = Depends(get_db)
-# ):
-#     """Update an existing object"""
-#     # Get object
-#     object = db.query(Object).filter(Object.id == object_id).first()
-#     if not object:
-#         raise HTTPException(status_code=404, detail="Object not found")
-#
-#     # Validate parent exists if provided
-#     if object_data.parent_object_id is not None:
-#         if object_data.parent_object_id == object_id:
-#             raise HTTPException(status_code=400, detail="Object cannot be its own parent")
-#
-#         if object_data.parent_object_id > 0:  # Only check if it's not being set to NULL
-#             parent = db.query(Object).filter(Object.id == object_data.parent_object_id).first()
-#             if not parent:
-#                 raise HTTPException(status_code=400, detail="Parent object does not exist")
-#
-#     # Update fields if provided
-#     if object_data.name is not None:
-#         object.name = object_data.name
-#
-#     if object_data.location_details is not None:
-#         object.location_details = object_data.location_details
-#
-#     if object_data.parent_object_id is not None:
-#         object.parent_id = object_data.parent_object_id
-#
-#     object.updated_at = datetime.now()
-#
-#     db.commit()
-#     db.refresh(object)
-#
-#     return object
-#
+@router.put("/{object_id}") # , response_model=ObjectInDB)
+def update_object(
+        object_id: int = Path(..., title="The ID of the object to update"),
+        object_data: ObjectUpdate = None,
+        db: Session = Depends(get_db)
+):
+    """Update an existing object"""
+    object = db.query(Object).filter(Object.id == object_id).first()
+    if not object:
+        raise HTTPException(status_code=404, detail="Object not found")
+
+    if object_data.parent_object_id is not None:
+        if object_data.parent_object_id == object_id:
+            raise HTTPException(status_code=400, detail="Object cannot be its own parent")
+
+        if object_data.parent_object_id > 0:
+            parent = db.query(Object).filter(Object.id == object_data.parent_object_id).first()
+            if not parent:
+                raise HTTPException(status_code=400, detail="Parent object does not exist")
+
+    # Update fields if provided
+    if object_data.name is not None:
+        object.name = object_data.name
+
+    if object_data.type is not None:
+        object.type = object_data.type
+
+    if object_data.location_details is not None:
+        object.location_details = object_data.location_details
+
+    if object_data.parent_object_id is not None:
+        object.parent_id = object_data.parent_object_id
+
+    object.updated_at = datetime.now()
+
+    db.commit()
+    db.refresh(object)
+
+    return object
+
 #
 # @router.delete("/{object_id}", status_code=204)
 # def delete_object(
@@ -239,12 +240,59 @@ GET_OBJECT_SUBTREE = """
     LEFT JOIN public.datapoint d ON od."datapoint_FK" = d.id
     ORDER BY oh.id;
 """
+
+_floor2 = json.loads('''
+{
+  "id": 5,
+  "name": "Floor 2",
+  "type": "floor",
+  "location_details": {
+    "elevation": "5 meters",
+    "description": "Guest rooms"
+  },
+  "parent_object_id": 1,
+  "created_at": "2025-03-17T03:11:49.632979+00:00",
+  "updated_at": "2025-03-17T03:11:49.632979+00:00",
+  "datapoints": [
+    {
+      "id": 33,
+      "name": "Noise Level",
+      "value": "50",
+      "unit": "dB",
+      "type": "noiseLevel"
+    }
+  ]
+}
+''')
+_floor3 = json.loads('''
+{
+  "id": 6,
+  "name": "Floor 3",
+  "type": "floor",
+  "location_details": {
+    "elevation": "10 meters",
+    "description": "Suites and conference rooms"
+  },
+  "parent_object_id": 1,
+  "created_at": "2025-03-17T03:11:49.632979+00:00",
+  "updated_at": "2025-03-17T03:11:49.632979+00:00",
+  "datapoints": [
+    {
+      "id": 34,
+      "name": "Noise Level",
+      "value": "40",
+      "unit": "dB",
+      "type": "noiseLevel"
+    }
+  ]
+}
+''')
 @router.get("/query/{object_id}/{path:path}")
 async def query_subtree(object_id: int, path: str, db: Session = Depends(get_db)):
     try:
         # Fetch subtree starting from the given object_id
-        result = db.execute(text(GET_OBJECT_SUBTREE), {"object_id": object_id})
-        objects = [dict(row) for row in result.mappings()]
+        subtree_res = db.execute(text(GET_OBJECT_SUBTREE), {"object_id": object_id})
+        objects = [dict(row) for row in subtree_res.mappings()]
 
         if not objects:
             raise HTTPException(status_code=404, detail=f"Object with id {object_id} not found")
@@ -259,11 +307,15 @@ async def query_subtree(object_id: int, path: str, db: Session = Depends(get_db)
         if result is None:
             raise HTTPException(status_code=404, detail=f"Path '{path}' not found in subtree of object {object_id}")
 
-        return result
+        print(len(result))
+        # return result
 
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+    return [_floor2, _floor3]
 
 # TODO: add get subtree api

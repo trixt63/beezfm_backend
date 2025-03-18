@@ -17,7 +17,7 @@ class Object(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
     type = Column(String(50), nullable=False, index=True)
-    parent_id = Column(Integer, ForeignKey("objects.id", ondelete="CASCADE"), nullable=True)
+    parent_id = Column(Integer, ForeignKey("object.id", ondelete="CASCADE"), nullable=True)
     location_details = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
