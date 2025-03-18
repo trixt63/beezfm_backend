@@ -41,28 +41,37 @@ def build_subtree_with_datapoints(objects_list, root_id=None):
 
         # Add children and datapoints
         if current_node:
+            obj_datapoint = {
+                'id': obj['datapoint_id'],
+                'name': obj['datapoint_name'],
+                'type': obj['datapoint_type'],
+                'value': obj['value'],
+                'unit': obj['unit'],
+                'is_fresh': obj['is_fresh'],
+                'created_at': obj['created_at'],
+                'updated_at': obj['updated_at']
+            }
             if obj['parent_id'] == current_node['id'] and obj['id'] != current_node['id']:
-                child = {
-                    'id': obj['id'],
-                    'name': obj['name'],
-                    'type': obj['type'],
-                    'location_details': obj['location_details'],
-                    'datapoints': [],
-                    'children': build_subtree_with_datapoints(objects_list, obj['id'])
-                }
-                current_node['children'].append(child)
+                _child_existed = False
+                # if old child:
+                for _child in current_node['children']:
+                    if obj['id'] == _child['id']:
+                        _child_existed = True
+                        _child['datapoints'].append(obj_datapoint)
+                # if new child:
+                if not _child_existed:
+                    child = {
+                        'id': obj['id'],
+                        'name': obj['name'],
+                        'type': obj['type'],
+                        'location_details': obj['location_details'],
+                        'datapoints': [obj_datapoint],
+                        'children': build_subtree_with_datapoints(objects_list, obj['id'])
+                    }
+                    current_node['children'].append(child)
 
             if obj['datapoint_id'] and obj['id'] == current_node['id']:
-                current_node['datapoints'].append({
-                    'id': obj['datapoint_id'],
-                    'name': obj['datapoint_name'],
-                    'type': obj['datapoint_type'],
-                    'value': obj['value'],
-                    'unit': obj['unit'],
-                    'is_fresh': obj['is_fresh'],
-                    'created_at': obj['created_at'],
-                    'updated_at': obj['updated_at']
-                })
+                current_node['datapoints'].append(obj_datapoint)
     return tree
 
 
@@ -92,59 +101,10 @@ def resolve_path_by_type(objects, path: str) -> Union[dict, List[dict], None]:
 
         if not next_level and not is_last:
             return []
-        current_level = next_level
+        else:
+            current_level = next_level
 
     return current_level
-
-
-def find_by_path(data, path_string):
-    """
-    Traverse hierarchical data following a path of "type" field values using dot notation.
-    Returns all matches found.
-
-    Args:
-        data: The root node of the hierarchical data
-        path_string: String with dot-delimited type values defining the path to follow (e.g., "folder.document")
-
-    Returns:
-        List of all nodes that match the complete path
-    """
-    # Convert the dot-delimited string to a list of path components
-    path = path_string.split(".")
-
-    def traverse(node, path_parts):
-        matches = []
-
-        if not path_parts:
-            return [node]
-
-        current_type = path_parts[0]
-        remaining_path = path_parts[1:]
-
-        # Check if current node matches the first type in path
-        if node.get("type") == current_type:
-            if not remaining_path:
-                matches.append(node)
-            else:
-                # If we have more path to traverse, look in children
-                if "children" in node and isinstance(node["children"], list):
-                    for child in node["children"]:
-                        matches.extend(traverse(child, remaining_path))
-
-        # If we're at root level, also search all children for direct matches
-        elif not remaining_path and "children" in node and isinstance(node["children"], list):
-            for child in node["children"]:
-                if child.get("type") == current_type:
-                    matches.append(child)
-
-        # If first element doesn't match, try to search all children for the full path
-        if "children" in node and isinstance(node["children"], list):
-            for child in node["children"]:
-                matches.extend(traverse(child, path_parts))
-
-        return matches
-
-    return traverse(data, path)
 
 
 # Helper function to manage single object association
