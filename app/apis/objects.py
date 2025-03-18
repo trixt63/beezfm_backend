@@ -96,57 +96,84 @@ def update_object(
         db: Session = Depends(get_db)
 ):
     """Update an existing object"""
-    object = db.query(Object).filter(Object.id == object_id).first()
-    if not object:
+    _object = db.query(Object).filter(Object.id == object_id).first()
+    if not _object:
         raise HTTPException(status_code=404, detail="Object not found")
 
-    if object_data.parent_object_id is not None:
-        if object_data.parent_object_id == object_id:
+    if object_data.parent_id is not None:
+        if object_data.parent_id == object_id:
             raise HTTPException(status_code=400, detail="Object cannot be its own parent")
 
-        if object_data.parent_object_id > 0:
-            parent = db.query(Object).filter(Object.id == object_data.parent_object_id).first()
+        if object_data.parent_id > 0:
+            parent = db.query(Object).filter(Object.id == object_data.parent_id).first()
             if not parent:
                 raise HTTPException(status_code=400, detail="Parent object does not exist")
 
     # Update fields if provided
     if object_data.name is not None:
-        object.name = object_data.name
+        _object.name = object_data.name
 
     if object_data.type is not None:
-        object.type = object_data.type
+        _object.type = object_data.type
 
     if object_data.location_details is not None:
-        object.location_details = object_data.location_details
+        _object.location_details = object_data.location_details
 
-    if object_data.parent_object_id is not None:
-        object.parent_id = object_data.parent_object_id
+    if object_data.parent_id is not None:
+        _object.parent_id = object_data.parent_id
 
-    object.updated_at = datetime.now()
+    _object.updated_at = datetime.now()
 
     db.commit()
-    db.refresh(object)
+    db.refresh(_object)
 
-    return object
+    return _object
 
-#
-# @router.delete("/{object_id}", status_code=204)
-# def delete_object(
-#         object_id: int = Path(..., title="The ID of the object to delete"),
-#         db: Session = Depends(get_db)
-# ):
-#     """Delete an object and all its children (cascade)"""
-#     # Get object
-#     object = db.query(Object).filter(Object.id == object_id).first()
-#     if not object:
-#         raise HTTPException(status_code=404, detail="Object not found")
-#
-#     # Delete object (cascade will handle children and datapoints)
-#     db.delete(object)
-#     db.commit()
-#
-#     return None
 
+@router.post("/objects/", status_code=201)
+async def create_object(object_data: ObjectCreate, db: Session = Depends(get_db)):
+    try:
+        # Verify parent_id exists if provided
+        if object_data.parent_id:
+            parent = db.query(Object).filter(Object.id == object_data.parent_id).first()
+            if not parent:
+                raise HTTPException(status_code=400, detail=f"Parent object with id {object_data.parent_id} not found")
+
+        # Create new object
+        new_object = Object(
+            name=object_data.name,
+            type=object_data.type,
+            parent_id=object_data.parent_id,
+            location_details=object_data.location_details
+        )
+
+        db.add(new_object)
+        db.commit()
+        db.refresh(new_object)
+
+        return new_object
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error creating object: {str(e)}")
+
+
+@router.delete("/{object_id}", status_code=204)
+def delete_object(
+        object_id: int = Path(..., title="The ID of the object to delete"),
+        db: Session = Depends(get_db)
+):
+    """Delete an object and all its children (cascade)"""
+    # Get object
+    _object = db.query(Object).filter(Object.id == object_id).first()
+    if not _object:
+        raise HTTPException(status_code=404, detail="Object not found")
+
+    # Delete object (cascade will handle children and datapoints)
+    db.delete(_object)
+    db.commit()
+
+    return None
 
 # @router.get("/{object_id}/path", response_model=Dict[str, str])
 # def get_object_path(
@@ -184,23 +211,6 @@ def update_object(
 #         raise HTTPException(status_code=404, detail="Object path not found")
 #
 #     return {"path": result.full_path}
-
-
-# @router.get("/query/path", response_model=List[ObjectInDB])
-# async def query_by_path(
-#         path: str = Query(..., title="Dot-separated path (e.g. Hotel.Floor.Room)"),
-#         db: Session = Depends(get_db)
-# ):
-#     """Find objects by hierarchical path"""
-#     path_segments = path.split('.')
-#
-#     if not path_segments:
-#         raise HTTPException(status_code=400, detail="Invalid path format")
-#
-#     # Start with the root object
-#
-#     # mock_data =
-
 
 GET_OBJECT_SUBTREE = """
     WITH RECURSIVE object_hierarchy AS (

@@ -9,7 +9,7 @@ class ObjectBase(BaseModel):
     name: str
     type: str
     location_details: Optional[Dict[str, Any]] = None
-    parent_object_id: Optional[int] = None
+    parent_id: Optional[int] = None
 
 class ObjectCreate(ObjectBase):
     """Model for creating a new object"""
@@ -19,7 +19,7 @@ class ObjectUpdate(BaseModel):
     """Model for updating an existing object"""
     name: Optional[str] = None
     type: Optional[str] = None
-    parent_object_id: Optional[int] = None
+    parent_id: Optional[int] = None
     location_details: Optional[Dict[str, Any]] = None
 
 class ObjectInDB(ObjectBase):
