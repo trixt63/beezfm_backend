@@ -14,8 +14,7 @@ from app.models.pydantic_models import (
     DatapointResponse, DatapointCreate
 )
 
-from app.utils import build_tree, build_subtree_with_datapoints, resolve_path_by_type, update_object_association, \
-    find_by_path
+from app.utils import build_tree, build_subtree_with_datapoints, update_object_association, resolve_relative_path
 
 router = APIRouter(prefix="/api/object")
 
@@ -89,6 +88,7 @@ def get_object(
         result["datapoints"] =  [dict(zip(_columns, row)) for row in _rows]
 
     return result
+
 
 @router.put("/{object_id}") # , response_model=ObjectInDB)
 def update_object(
@@ -223,96 +223,51 @@ async def create_datapoint(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error creating datapoint: {str(e)}")
 
-GET_OBJECT_SUBTREE = """
-    WITH RECURSIVE object_hierarchy AS (
-        SELECT 
-            o.id,
-            o.name,
-            o.type,
-            o.parent_id,
-            o.location_details
-        FROM public."object" o
-        WHERE o.id = :object_id
-        UNION ALL
-        SELECT 
-            o.id,
-            o.name,
-            o.type,
-            o.parent_id,
-            o.location_details FROM public."object" o
-        INNER JOIN object_hierarchy oh ON o.parent_id = oh.id
-    )
-    SELECT 
-        oh.id,
-        oh.name,
-        oh.type,
-        oh.parent_id,
-        oh.location_details,
-        d.id as datapoint_id,
-        d.name as datapoint_name,
-        d.type as datapoint_type,
-        d.value,
-        d.unit,
-        d.is_fresh,
-        d.created_at,
-        d.updated_at
-    FROM object_hierarchy oh
-    LEFT JOIN public.object_datapoint od ON oh.id = od."object_FK"
-    LEFT JOIN public.datapoint d ON od."datapoint_FK" = d.id
-    ORDER BY oh.id;
-"""
 
-_floor2 = json.loads('''
-{
-  "id": 5,
-  "name": "Floor 2",
-  "type": "floor",
-  "location_details": {
-    "elevation": "5 meters",
-    "description": "Guest rooms"
-  },
-  "parent_object_id": 1,
-  "created_at": "2025-03-17T03:11:49.632979+00:00",
-  "updated_at": "2025-03-17T03:11:49.632979+00:00",
-  "datapoints": [
-    {
-      "id": 33,
-      "name": "Noise Level",
-      "value": "50",
-      "unit": "dB",
-      "type": "noiseLevel"
-    }
-  ]
-}
-''')
-_floor3 = json.loads('''
-{
-  "id": 6,
-  "name": "Floor 3",
-  "type": "floor",
-  "location_details": {
-    "elevation": "10 meters",
-    "description": "Suites and conference rooms"
-  },
-  "parent_object_id": 1,
-  "created_at": "2025-03-17T03:11:49.632979+00:00",
-  "updated_at": "2025-03-17T03:11:49.632979+00:00",
-  "datapoints": [
-    {
-      "id": 34,
-      "name": "Noise Level",
-      "value": "40",
-      "unit": "dB",
-      "type": "noiseLevel"
-    }
-  ]
-}
-''')
+
 @router.get("/query/{object_id}/{path:path}")
-async def query_subtree(object_id: int, path: str, db: Session = Depends(get_db)):
+async def query_path(object_id: int, path: str, db: Session = Depends(get_db)):
     try:
         # Fetch subtree starting from the given object_id
-        subtree_res = db.execute(text(GET_OBJECT_SUBTREE), {"object_id": object_id})
+        query_subtree = """
+            WITH RECURSIVE object_hierarchy AS (
+                SELECT 
+                    o.id,
+                    o.name,
+                    o.type,
+                    o.parent_id,
+                    o.location_details
+                FROM public."object" o
+                WHERE o.id = :object_id
+                UNION ALL
+                SELECT 
+                    o.id,
+                    o.name,
+                    o.type,
+                    o.parent_id,
+                    o.location_details FROM public."object" o
+                INNER JOIN object_hierarchy oh ON o.parent_id = oh.id
+            )
+            SELECT 
+                oh.id,
+                oh.name,
+                oh.type,
+                oh.parent_id,
+                oh.location_details,
+                d.id as datapoint_id,
+                d.name as datapoint_name,
+                d.type as datapoint_type,
+                d.value,
+                d.unit,
+                d.is_fresh,
+                d.created_at,
+                d.updated_at
+            FROM object_hierarchy oh
+            LEFT JOIN public.object_datapoint od ON oh.id = od."object_FK"
+            LEFT JOIN public.datapoint d ON od."datapoint_FK" = d.id
+            ORDER BY oh.id;
+        """
+        subtree_res = db.execute(text(query_subtree), {"object_id": object_id})
         objects = [dict(row) for row in subtree_res.mappings()]
 
         if not objects:
@@ -321,23 +276,10 @@ async def query_subtree(object_id: int, path: str, db: Session = Depends(get_db)
         # Build the subtree starting from the root object
         subtree = build_subtree_with_datapoints(objects, object_id)
 
-        # Resolve the path within the subtree
-        # TODO: fix resolve_path_by_type
-        # result = resolve_path_by_type(subtree, path)
-        result = find_by_path(subtree[0], path)
-
-        # if result is None:
-        #     raise HTTPException(status_code=404, detail=f"Path '{path}' not found in subtree of object {object_id}")
-
+        result = resolve_relative_path(subtree[0], path)
         return result
-        # print(len(result))
 
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-    return [_floor2, _floor3]
-
-# TODO: add get subtree api
