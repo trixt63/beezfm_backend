@@ -1,0 +1,55 @@
+INSERT INTO public."object" ("name","type",parent_id,location_details,created_at,updated_at) VALUES
+	 ('Grand Hotel','building',NULL,'{"address": "123 Main St, Cityville", "zipcode": "12345"}','2025-03-17 10:11:41.667337+07','2025-03-17 10:11:41.667337+07'),
+	 ('Ocean Resort','building',NULL,'{"address": "456 Beach Rd, Seaside", "zipcode": "67890"}','2025-03-17 10:11:41.667337+07','2025-03-17 10:11:41.667337+07'),
+	 ('Mountain Lodge','building',NULL,'{"address": "789 Hilltop Ln, Ridgeview", "zipcode": "54321"}','2025-03-17 10:11:41.667337+07','2025-03-17 10:11:41.667337+07'),
+	 ('Floor 1','floor',1,'{"elevation": "0 meters", "description": "Ground floor with lobby"}','2025-03-17 10:11:49.632979+07','2025-03-17 10:11:49.632979+07'),
+	 ('Floor 2','floor',1,'{"elevation": "5 meters", "description": "Guest rooms"}','2025-03-17 10:11:49.632979+07','2025-03-17 10:11:49.632979+07'),
+	 ('Floor 3','floor',1,'{"elevation": "10 meters", "description": "Suites and conference rooms"}','2025-03-17 10:11:49.632979+07','2025-03-17 10:11:49.632979+07'),
+	 ('Floor 4','floor',1,'{"elevation": "15 meters", "description": "Premium suites"}','2025-03-17 10:11:49.632979+07','2025-03-17 10:11:49.632979+07'),
+	 ('Floor 1','floor',2,'{"elevation": "0 meters", "description": "Lobby and dining"}','2025-03-17 10:12:03.779913+07','2025-03-17 10:12:03.779913+07'),
+	 ('Floor 2','floor',2,'{"elevation": "4 meters", "description": "Standard rooms"}','2025-03-17 10:12:03.779913+07','2025-03-17 10:12:03.779913+07'),
+	 ('Floor 3','floor',2,'{"elevation": "8 meters", "description": "Ocean view rooms"}','2025-03-17 10:12:03.779913+07','2025-03-17 10:12:03.779913+07');
+INSERT INTO public."object" ("name","type",parent_id,location_details,created_at,updated_at) VALUES
+	 ('Floor 4','floor',2,'{"elevation": "12 meters", "description": "Penthouse level"}','2025-03-17 10:12:03.779913+07','2025-03-17 10:12:03.779913+07'),
+	 ('Floor 1','floor',3,'{"elevation": "0 meters", "description": "Lobby and recreation"}','2025-03-17 10:12:07.728504+07','2025-03-17 10:12:07.728504+07'),
+	 ('Floor 2','floor',3,'{"elevation": "6 meters", "description": "Cozy rooms"}','2025-03-17 10:12:07.728504+07','2025-03-17 10:12:07.728504+07'),
+	 ('Floor 3','floor',3,'{"elevation": "12 meters", "description": "Luxury cabins"}','2025-03-17 10:12:07.728504+07','2025-03-17 10:12:07.728504+07'),
+	 ('Lobby','room',4,'{"size": "200 sqm", "purpose": "reception area"}','2025-03-17 10:12:12.883328+07','2025-03-17 10:12:12.883328+07'),
+	 ('Restaurant','room',4,'{"size": "150 sqm", "purpose": "dining area"}','2025-03-17 10:12:12.883328+07','2025-03-17 10:12:12.883328+07'),
+	 ('Gift Shop','room',4,'{"size": "50 sqm", "purpose": "retail"}','2025-03-17 10:12:12.883328+07','2025-03-17 10:12:12.883328+07'),
+	 ('Room 201','room',5,'{"size": "30 sqm", "view": "city", "bed_type": "queen"}','2025-03-17 10:12:16.794715+07','2025-03-17 10:12:16.794715+07'),
+	 ('Room 202','room',5,'{"size": "35 sqm", "view": "garden", "bed_type": "king"}','2025-03-17 10:12:16.794715+07','2025-03-17 10:12:16.794715+07'),
+	 ('Room 203','room',5,'{"size": "32 sqm", "view": "courtyard", "bed_type": "double"}','2025-03-17 10:12:16.794715+07','2025-03-17 10:12:16.794715+07');
+INSERT INTO public."object" ("name","type",parent_id,location_details,created_at,updated_at) VALUES
+	 ('Suite 301','room',6,'{"size": "50 sqm", "bed_type": "king", "amenities": ["jacuzzi", "minibar"]}','2025-03-17 10:12:20.601836+07','2025-03-17 10:12:20.601836+07'),
+	 ('Conference Room A','room',6,'{"size": "100 sqm", "capacity": 50, "equipment": ["projector", "whiteboard"]}','2025-03-17 10:12:20.601836+07','2025-03-17 10:12:20.601836+07'),
+	 ('Suite 302','room',6,'{"size": "55 sqm", "bed_type": "king", "amenities": ["balcony", "minibar"]}','2025-03-17 10:12:20.601836+07','2025-03-17 10:12:20.601836+07'),
+	 ('Penthouse 401','room',7,'{"size": "80 sqm", "bed_type": "king", "amenities": ["terrace", "private lounge"]}','2025-03-17 10:12:20.601836+07','2025-03-17 10:12:20.601836+07'),
+	 ('Penthouse 402','room',7,'{"size": "85 sqm", "bed_type": "king", "amenities": ["terrace", "jacuzzi"]}','2025-03-17 10:12:20.601836+07','2025-03-17 10:12:20.601836+07'),
+	 ('Lobby','room',8,'{"size": "180 sqm", "purpose": "reception and lounge"}','2025-03-17 10:14:49.679908+07','2025-03-17 10:14:49.679908+07'),
+	 ('Beach Cafe','room',8,'{"size": "120 sqm", "purpose": "casual dining"}','2025-03-17 10:14:49.679908+07','2025-03-17 10:14:49.679908+07'),
+	 ('Room 201','room',9,'{"size": "28 sqm", "view": "pool", "bed_type": "queen"}','2025-03-17 10:14:49.679908+07','2025-03-17 10:14:49.679908+07'),
+	 ('Room 202','room',9,'{"size": "30 sqm", "view": "garden", "bed_type": "double"}','2025-03-17 10:14:49.679908+07','2025-03-17 10:14:49.679908+07'),
+	 ('Room 203','room',9,'{"size": "29 sqm", "view": "pool", "bed_type": "queen"}','2025-03-17 10:14:49.679908+07','2025-03-17 10:14:49.679908+07');
+INSERT INTO public."object" ("name","type",parent_id,location_details,created_at,updated_at) VALUES
+	 ('Room 301','room',10,'{"size": "35 sqm", "view": "ocean", "bed_type": "king"}','2025-03-17 10:14:49.679908+07','2025-03-17 10:14:49.679908+07'),
+	 ('Room 302','room',10,'{"size": "38 sqm", "view": "ocean", "bed_type": "king"}','2025-03-17 10:14:49.679908+07','2025-03-17 10:14:49.679908+07'),
+	 ('Room 303','room',10,'{"size": "36 sqm", "view": "ocean", "bed_type": "queen"}','2025-03-17 10:14:49.679908+07','2025-03-17 10:14:49.679908+07'),
+	 ('Penthouse 401','room',11,'{"size": "90 sqm", "bed_type": "king", "amenities": ["ocean terrace", "private pool"]}','2025-03-17 10:14:49.679908+07','2025-03-17 10:14:49.679908+07'),
+	 ('Lobby','room',12,'{"size": "160 sqm", "purpose": "reception and fireplace lounge"}','2025-03-17 10:14:53.865303+07','2025-03-17 10:14:53.865303+07'),
+	 ('Rec Room','room',12,'{"size": "80 sqm", "purpose": "games and entertainment"}','2025-03-17 10:14:53.865303+07','2025-03-17 10:14:53.865303+07'),
+	 ('Room 201','room',13,'{"size": "25 sqm", "view": "forest", "bed_type": "queen"}','2025-03-17 10:14:53.865303+07','2025-03-17 10:14:53.865303+07'),
+	 ('Room 202','room',13,'{"size": "27 sqm", "view": "mountain", "bed_type": "double"}','2025-03-17 10:14:53.865303+07','2025-03-17 10:14:53.865303+07'),
+	 ('Cabin 301','room',14,'{"size": "40 sqm", "bed_type": "king", "amenities": ["fireplace", "balcony"]}','2025-03-17 10:14:53.865303+07','2025-03-17 10:14:53.865303+07'),
+	 ('Cabin 302','room',14,'{"size": "45 sqm", "bed_type": "king", "amenities": ["fireplace", "hot tub"]}','2025-03-17 10:14:53.865303+07','2025-03-17 10:14:53.865303+07');
+INSERT INTO public."object" ("name","type",parent_id,location_details,created_at,updated_at) VALUES
+	 ('HVAC Unit - GH Lobby','hvac',15,'{"model": "ACME-123", "power": "5kW", "status": "active"}','2025-03-17 10:14:58.636886+07','2025-03-17 10:14:58.636886+07'),
+	 ('Meter - GH Restaurant','meter',16,'{"type": "electricity", "unit": "kWh", "reading": 4500}','2025-03-17 10:14:58.636886+07','2025-03-17 10:14:58.636886+07'),
+	 ('HVAC Unit - Room 201 GH','hvac',18,'{"model": "ACME-200", "power": "3kW", "status": "active"}','2025-03-17 10:14:58.636886+07','2025-03-17 10:14:58.636886+07'),
+	 ('HVAC Unit - Suite 301 GH','hvac',21,'{"model": "ACME-300", "power": "4kW", "status": "standby"}','2025-03-17 10:14:58.636886+07','2025-03-17 10:14:58.636886+07'),
+	 ('HVAC Unit - OR Lobby','hvac',26,'{"model": "ACME-150", "power": "6kW", "status": "active"}','2025-03-17 10:14:58.636886+07','2025-03-17 10:14:58.636886+07'),
+	 ('Meter - OR Beach Cafe','meter',27,'{"type": "water", "unit": "liters", "reading": 1200}','2025-03-17 10:14:58.636886+07','2025-03-17 10:14:58.636886+07'),
+	 ('HVAC Unit - Room 301 OR','hvac',31,'{"model": "ACME-250", "power": "3.5kW", "status": "active"}','2025-03-17 10:14:58.636886+07','2025-03-17 10:14:58.636886+07'),
+	 ('HVAC Unit - ML Lobby','hvac',36,'{"model": "ACME-180", "power": "5.5kW", "status": "active"}','2025-03-17 10:14:58.636886+07','2025-03-17 10:14:58.636886+07'),
+	 ('Meter - ML Rec Room','meter',37,'{"type": "electricity", "unit": "kWh", "reading": 3200}','2025-03-17 10:14:58.636886+07','2025-03-17 10:14:58.636886+07'),
+	 ('HVAC Unit - Cabin 301 ML','hvac',39,'{"model": "ACME-220", "power": "4kW", "status": "standby"}','2025-03-17 10:14:58.636886+07','2025-03-17 10:14:58.636886+07');
