@@ -75,37 +75,34 @@ def build_subtree_with_datapoints(objects_list, root_id=None):
     return tree
 
 
-# Updated path resolution using type
-def resolve_path_by_type(objects, path: str) -> Union[dict, List[dict], None]:
+def resolve_relative_path(object_root, path, list_returns=None):
     parts = path.split('.')
-    datapoint_type = parts.pop()
-    current_level = objects
+    # remove the first level of path:
+    if parts[0].lower() == object_root['type']:
+        parts.pop(0)
 
-    # Traverse the path for object types
-    for i, part in enumerate(parts):
-        next_level = []
-        is_last = (i == len(parts) - 1)
+    current_obj = object_root
+    if list_returns is None:
+        list_returns = []
 
-        for obj in current_level:
-            if obj["type"].lower() == part.lower():
-                # if is_last and not any(p["type"].lower() == part.lower() for p in obj["datapoints"]):
-                #     # Path ends with object type
-                #     next_level.append(obj)
-                if not is_last:
-                    # Continue traversing children
-                    children = [o for o in objects if o.get("parent_id") == obj["id"]]
-                    next_level.extend(children)
-            if is_last and any(p["type"].lower() == datapoint_type.lower() for p in obj["datapoints"]):
-                # Path ends with datapoint type
-                datapoints = [dp for dp in obj["datapoints"] if dp["type"].lower() == datapoint_type.lower()]
-                return datapoints
+    current_part = parts[0]
+    if any([current_part.lower() == _child['type'].lower() for _child in current_obj['children']]):
+        # traverse children
+        next_path = '.'.join([p_ for p_ in parts[1:]])
+        for _child in current_obj['children']:
+            resolve_relative_path(_child, next_path, list_returns)
+    else:
+        for _datapoint in current_obj['datapoints']:
+            if _datapoint.get('type') and (current_part.lower() == _datapoint['type'].lower()):
+                list_returns.append({
+                    "id": current_obj["id"],
+                    "name": current_obj["name"],
+                    "type": current_obj["type"],
+                    "location_details": current_obj["location_details"],
+                    "datapoints": _datapoint
+                })
 
-        if not next_level and not is_last:
-            return []
-        else:
-            current_level = next_level
-
-    return current_level
+    return list_returns
 
 
 # Helper function to manage single object association
