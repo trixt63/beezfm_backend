@@ -7,14 +7,14 @@ from typing import List, Dict, Optional
 from datetime import datetime
 
 from app.database import get_db
-from app.models.sql_alchemy_models import Object, Datapoint
+from app.models.sql_alchemy_models import Object, Datapoint, ObjectDatapoint
 from app.models.pydantic_models import (
     ObjectBase,
     ObjectCreate, ObjectUpdate, ObjectInDB,
-    ObjectWithRelations,
+    DatapointResponse, DatapointCreate
 )
 
-from app.utils import build_tree, build_subtree_with_datapoints, resolve_path_by_type
+from app.utils import build_tree, build_subtree_with_datapoints, resolve_path_by_type, update_object_association
 
 router = APIRouter(prefix="/api/objects")
 
@@ -174,6 +174,54 @@ def delete_object(
     db.commit()
 
     return None
+
+
+# POST endpoint to create a datapoint under a specific object
+@router.post("/{object_id}/datapoint/", response_model=DatapointResponse, status_code=201)
+async def create_datapoint(
+        object_id: int,
+        datapoint_data: DatapointCreate,
+        db: Session = Depends(get_db)
+):
+    try:
+        # Create the datapoint
+        new_datapoint = Datapoint(
+            name=datapoint_data.name,
+            value=datapoint_data.value,
+            unit=datapoint_data.unit,
+            is_fresh=datapoint_data.is_fresh,
+            type=datapoint_data.type
+        )
+
+        db.add(new_datapoint)
+        db.flush()  # Get the ID before committing
+
+        # Associate with the specified object
+        update_object_association(db, new_datapoint.id, object_id)
+
+        db.commit()
+        db.refresh(new_datapoint)
+
+        # Return with associated object ID
+        return DatapointResponse(
+            id=new_datapoint.id,
+            name=new_datapoint.name,
+            value=new_datapoint.value,
+            unit=new_datapoint.unit,
+            created_at=new_datapoint.created_at.isoformat(),
+            updated_at=new_datapoint.updated_at.isoformat(),
+            is_fresh=new_datapoint.is_fresh,
+            type=new_datapoint.type,
+            object_id=object_id
+        )
+
+    except HTTPException as e:
+        db.rollback()
+        raise e
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error creating datapoint: {str(e)}")
+
 
 # @router.get("/{object_id}/path", response_model=Dict[str, str])
 # def get_object_path(

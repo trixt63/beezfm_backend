@@ -31,40 +31,38 @@ class ObjectInDB(ObjectBase):
     class Config:
         orm_mode = True
 
-class DatapointBase(BaseModel):
-    """Base model for datapoint data"""
-    object_FK: int
-    value: str
-    unit: Optional[str] = None
 
-class DatapointCreate(DatapointBase):
-    """Model for creating a new datapoint"""
-    pass
-
-class DatapointUpdate(BaseModel):
-    """Model for updating an existing datapoint"""
-    value: Optional[str] = None
-    unit: Optional[str] = None
-
-class DatapointInDB(DatapointBase):
-    """Model for datapoint as stored in the database"""
-    datapoint_id: int
-    timestamp: datetime
-    created_at: datetime
-    updated_at: datetime
+# Datapoints
+class DatapointCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255, description="Name of the datapoint")
+    value: Optional[str] = Field(None, description="Value of the datapoint")
+    unit: Optional[str] = Field(None, max_length=50, description="Unit of measurement")
+    is_fresh: Optional[bool] = Field(True, description="Whether the datapoint is fresh")
+    type: Optional[str] = Field(None, max_length=255, description="Type of the datapoint")
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
-class ObjectWithChildren(ObjectInDB):
-    """Model for object with its children"""
-    children: Optional[List[ObjectInDB]] = None
+class DatapointUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    value: Optional[str] = None
+    unit: Optional[str] = Field(None, max_length=50)
+    is_fresh: Optional[bool] = None
+    type: Optional[str] = Field(None, max_length=255)
 
-class ObjectWithDatapoints(ObjectInDB):
-    """Model for object with its datapoints"""
-    datapoints: Optional[List[DatapointInDB]] = None
+    class Config:
+        from_attributes = True
 
-class ObjectWithRelations(ObjectInDB):
-    """Model for object with both children and datapoints"""
-    children: Optional[List[ObjectInDB]] = None
-    datapoints: Optional[List[DatapointInDB]] = None
+class DatapointResponse(BaseModel):
+    id: int
+    name: str
+    value: Optional[str]
+    unit: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+    is_fresh: bool
+    type: str
+    object_id: Optional[int] = Field(None, description="ID of the associated object")
+
+    class Config:
+        from_attributes = True

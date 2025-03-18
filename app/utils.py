@@ -1,5 +1,9 @@
 # Helper function to build tree structure
+from fastapi import APIRouter, HTTPException, Depends, Query, Path
 from typing import Union, List
+from app.models.sql_alchemy_models import Object, Datapoint, ObjectDatapoint
+from app.models.pydantic_models import DatapointCreate, DatapointUpdate, DatapointResponse
+from sqlalchemy.orm import Session
 
 
 def build_tree(objects_list, parent_id=None):
@@ -96,3 +100,17 @@ def resolve_path_by_type(hierarchy, path: str) -> Union[dict, List[dict], None]:
             return None
 
     return current
+
+
+# Helper function to manage single object association
+def update_object_association(db: Session, datapoint_id: int, object_id: int):
+    # Validate object exists
+    if not db.query(Object).filter(Object.id == object_id).first():
+        raise HTTPException(status_code=404, detail=f"Object with id {object_id} not found")
+
+    # Remove any existing association
+    db.query(ObjectDatapoint).filter(ObjectDatapoint.datapoint_FK == datapoint_id).delete()
+
+    # Create new association
+    new_assoc = ObjectDatapoint(object_FK=object_id, datapoint_FK=datapoint_id)
+    db.add(new_assoc)

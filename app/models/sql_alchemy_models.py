@@ -42,7 +42,7 @@ class Datapoint(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     is_fresh = Column(Boolean, default=True)
-    type = Column
+    type = Column(String(50))
 
     # Relationships
     # objects = relationship("Object",
