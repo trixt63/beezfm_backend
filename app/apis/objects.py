@@ -14,9 +14,10 @@ from app.models.pydantic_models import (
     DatapointResponse, DatapointCreate
 )
 
-from app.utils import build_tree, build_subtree_with_datapoints, resolve_path_by_type, update_object_association
+from app.utils import build_tree, build_subtree_with_datapoints, resolve_path_by_type, update_object_association, \
+    find_by_path
 
-router = APIRouter(prefix="/api/objects")
+router = APIRouter(prefix="/api/object")
 
 
 @router.get("/tree")
@@ -130,7 +131,7 @@ def update_object(
     return _object
 
 
-@router.post("/objects/", status_code=201)
+@router.post("/", status_code=201)
 async def create_object(object_data: ObjectCreate, db: Session = Depends(get_db)):
     try:
         # Verify parent_id exists if provided
@@ -221,44 +222,6 @@ async def create_datapoint(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error creating datapoint: {str(e)}")
-
-
-# @router.get("/{object_id}/path", response_model=Dict[str, str])
-# def get_object_path(
-#         object_id: int = Path(..., title="The ID of the object to get path for"),
-#         db: Session = Depends(get_db)
-# ):
-#     """Get the full hierarchical path for an object (e.g., Hotel.Floor.Room)"""
-#     # Check if object exists
-#     object = db.query(Object).filter(Object.id == object_id).first()
-#     if not object:
-#         raise HTTPException(status_code=404, detail="Object not found")
-#
-#     # Use a raw SQL query with a recursive CTE to get the path
-#     # SQLAlchemy Core doesn't directly support recursive CTEs
-#     query = text("""
-#     WITH RECURSIVE object_path AS (
-#         SELECT id, name, parent_object_id, ARRAY[name] as path
-#         FROM objects
-#         WHERE id = :object_id
-#
-#         UNION ALL
-#
-#         SELECT o.id, o.name, o.parent_object_id, o.name || op.path
-#         FROM objects o
-#         JOIN object_path op ON o.id = op.parent_object_id
-#     )
-#     SELECT array_to_string(path, '.') as full_path
-#     FROM object_path
-#     WHERE parent_object_id IS NULL
-#     """)
-#
-#     result = db.execute(query, {"object_id": object_id}).first()
-#
-#     if not result or not result.full_path:
-#         raise HTTPException(status_code=404, detail="Object path not found")
-#
-#     return {"path": result.full_path}
 
 GET_OBJECT_SUBTREE = """
     WITH RECURSIVE object_hierarchy AS (
@@ -360,13 +323,14 @@ async def query_subtree(object_id: int, path: str, db: Session = Depends(get_db)
 
         # Resolve the path within the subtree
         # TODO: fix resolve_path_by_type
-        result = resolve_path_by_type(subtree, path)
+        # result = resolve_path_by_type(subtree, path)
+        result = find_by_path(subtree[0], path)
 
-        if result is None:
-            raise HTTPException(status_code=404, detail=f"Path '{path}' not found in subtree of object {object_id}")
+        # if result is None:
+        #     raise HTTPException(status_code=404, detail=f"Path '{path}' not found in subtree of object {object_id}")
 
-        print(len(result))
-        # return result
+        return result
+        # print(len(result))
 
     except HTTPException:
         raise

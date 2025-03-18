@@ -8,7 +8,7 @@ from app.database import get_db
 from app.models.sql_alchemy_models import Object, Datapoint, ObjectDatapoint
 from app.models.pydantic_models import DatapointCreate, DatapointUpdate, DatapointResponse
 
-router = APIRouter(prefix="/api/datapoints")
+router = APIRouter(prefix="/api/datapoint")
 
 
 # GET endpoint to retrieve a datapoint by ID
