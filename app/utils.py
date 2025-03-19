@@ -56,7 +56,7 @@ def build_subtree_with_datapoints(objects_list, root_id=None):
                 _child_existed = False
                 # if old child:
                 for _child in current_node['children']:
-                    if obj['id'] == _child['id']:
+                    if _child['id'] == obj['id']:
                         _child_existed = True
                         _child['datapoints'].append(obj_datapoint)
                 # if new child:
