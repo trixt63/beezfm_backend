@@ -14,7 +14,7 @@ from app.models.pydantic_models import (
     DatapointResponse, DatapointCreate
 )
 
-from app.utils import build_tree, build_subtree_with_datapoints, update_object_association, resolve_relative_path
+from app.utils import build_tree, build_subtree_with_datapoints, update_object_association, resolve_relative_path, build_tree_with_node_datapoints
 
 router = APIRouter(prefix="/api/objects")
 
@@ -227,7 +227,7 @@ async def create_datapoint(
 @router.get("/query/{object_id}/{path:path}")
 async def query_path(object_id: int, path: str, db: Session = Depends(get_db)):
     try:
-        # Fetch subtree starting from the given object_id
+        # fetch subtree starting from object_id and path
         query_subtree = """
             WITH RECURSIVE object_hierarchy AS (
                 SELECT 
@@ -268,15 +268,28 @@ async def query_path(object_id: int, path: str, db: Session = Depends(get_db)):
         """
         subtree_res = db.execute(text(query_subtree), {"object_id": object_id})
         objects = [dict(row) for row in subtree_res.mappings()]
-
         if not objects:
             raise HTTPException(status_code=404, detail=f"Object with id {object_id} not found")
 
-        # Build the subtree starting from the root object
         subtree = build_subtree_with_datapoints(objects, object_id)
+        objects_with_datapoint = resolve_relative_path(subtree[0], path)
 
-        result = resolve_relative_path(subtree[0], path)
-        return result
+        # get full tree, but with only the datapoints in path
+        _query_all_objects = """SELECT
+            id,
+            name,
+            type,
+            parent_id
+        FROM public."object"
+        ORDER BY
+            CASE WHEN parent_id IS NULL THEN 0 ELSE 1 END,
+            parent_id,
+            id;
+        """
+        objects_result = db.execute(text(_query_all_objects))
+        objects = [dict(row) for row in objects_result.mappings()]
+        full_tree = build_tree_with_node_datapoints(objects, nodes_with_datapoints=objects_with_datapoint)
+        return full_tree
 
     except HTTPException:
         raise

@@ -78,6 +78,25 @@ def build_subtree_with_datapoints(objects_list, root_id=None, first_loop=True):
         return tree[0]['children']
 
 
+def build_tree_with_node_datapoints(objects_list, nodes_with_datapoints: List, parent_id: int =None):
+    tree = []
+    for obj in objects_list:
+        if obj['parent_id'] == parent_id:
+            # Create node
+            node = {
+                'id': obj['id'],
+                'name': obj['name'],
+                'type': obj['type'],
+                'children': build_tree_with_node_datapoints(objects_list, nodes_with_datapoints, obj['id'])
+            }
+            # if append datapoints
+            for _node_to_append in nodes_with_datapoints:
+                if _node_to_append['id'] == obj['id']:
+                    node['datapoints'] = _node_to_append['datapoints']
+
+            tree.append(node)
+    return tree
+
 def resolve_relative_path(object_root, path, list_returns=None):
     parts = path.split('.')
     # remove the first level of path:
