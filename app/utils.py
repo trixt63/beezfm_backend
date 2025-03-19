@@ -114,15 +114,18 @@ def resolve_relative_path(object_root, path, list_returns=None):
         for _child in current_obj['children']:
             resolve_relative_path(_child, next_path, list_returns)
     else:
+        filtered_datapoints = list()
         for _datapoint in current_obj['datapoints']:
             if _datapoint.get('type') and (current_part.lower() == _datapoint['type'].lower()):
-                list_returns.append({
-                    "id": current_obj["id"],
-                    "name": current_obj["name"],
-                    "type": current_obj["type"],
-                    "location_details": current_obj["location_details"],
-                    "datapoints": _datapoint
-                })
+                filtered_datapoints.append(_datapoint)
+        if filtered_datapoints:
+            list_returns.append({
+                "id": current_obj["id"],
+                "name": current_obj["name"],
+                "type": current_obj["type"],
+                "location_details": current_obj["location_details"],
+                "datapoints": filtered_datapoints
+            })
 
     return list_returns
 
