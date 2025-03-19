@@ -23,9 +23,7 @@ router = APIRouter(prefix="/api/objects")
 def get_objects_tree(
         db: Session = Depends(get_db)
 ):
-    """
-    Get objects with optional filtering by parent_id or type.
-    If parent_id is not provided, returns top-level objects.
+    """Get the tree hierarchy of objects
     """
     _query_all_objects = """SELECT
         id,

@@ -9,7 +9,7 @@ from app.models.pydantic_models import DatapointCreate, DatapointUpdate, Datapoi
 router = APIRouter(prefix="/api/datapoint")
 
 
-@router.get("/{id}") #, response_model=DatapointResponse)
+@router.get("/{id}" , response_model=DatapointResponse)
 async def get_datapoint(id: int, db: Session = Depends(get_db)):
     try:
         datapoint = db.query(Datapoint).filter(Datapoint.id == id).first()

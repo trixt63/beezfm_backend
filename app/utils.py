@@ -8,10 +8,11 @@ from sqlalchemy.orm import Session
 
 
 def build_tree(objects_list, parent_id=None):
+    """Builds a hierarchical tree structure from a list of objects based on parent-child relationships.
+    """
     tree = []
     for obj in objects_list:
         if obj['parent_id'] == parent_id:
-            # Create node
             node = {
                 'id': obj['id'],
                 'name': obj['name'],
@@ -23,6 +24,8 @@ def build_tree(objects_list, parent_id=None):
 
 
 def build_subtree_with_datapoints(objects_list, root_id=None, first_loop=True):
+    """From a objects list, recursively builds a subtree that start from the root_id
+    """
     tree = []
     current_node = None
 
@@ -79,6 +82,8 @@ def build_subtree_with_datapoints(objects_list, root_id=None, first_loop=True):
 
 
 def build_tree_with_node_datapoints(objects_list, nodes_with_datapoints: List, parent_id: int =None):
+    """Add nodes with datapoints to an objects tree
+    """
     tree = []
     for obj in objects_list:
         if obj['parent_id'] == parent_id:
