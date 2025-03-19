@@ -2,7 +2,7 @@ import json
 
 from fastapi import APIRouter, HTTPException, Depends, Query, Path
 from sqlalchemy.orm import Session
-from sqlalchemy import func, text, case
+from sqlalchemy import text
 from typing import List, Dict, Optional
 from datetime import datetime
 
@@ -20,7 +20,7 @@ router = APIRouter(prefix="/api/objects")
 
 
 @router.get("/tree")
-def get_objects(
+def get_objects_tree(
         db: Session = Depends(get_db)
 ):
     """
@@ -40,9 +40,9 @@ def get_objects(
     """
     objects_result = db.execute(text(_query_all_objects))
     objects = [dict(row) for row in objects_result.mappings()]
-    hierarchy = build_tree(objects)
+    tree = build_tree(objects)
 
-    return hierarchy
+    return tree
 
 
 @router.get("/{object_id}")
@@ -52,9 +52,6 @@ def get_object(
         include_datapoints: bool = True,
         db: Session = Depends(get_db)
 ):
-    """
-    Get a specific object by ID with optional inclusion of children and datapoints.
-    """
     _object = db.query(Object).filter(Object.id == object_id).first()
 
     if not _object:
@@ -70,12 +67,10 @@ def get_object(
         "updated_at": _object.updated_at
     }
 
-    # Include children if requested
     if include_children:
         children = db.query(Object).filter(Object.parent_id == object_id).all()
         result["children"] = children
 
-    # Include datapoints if requested
     if include_datapoints:
         _datapoint_query = f"""select d.id, d.name, d.value, d.unit, d.type from "object" o
                     join object_datapoint od on o.id = od."object_FK"
@@ -96,7 +91,6 @@ def update_object(
         object_data: ObjectUpdate = None,
         db: Session = Depends(get_db)
 ):
-    """Update an existing object"""
     _object = db.query(Object).filter(Object.id == object_id).first()
     if not _object:
         raise HTTPException(status_code=404, detail="Object not found")
@@ -110,7 +104,6 @@ def update_object(
             if not parent:
                 raise HTTPException(status_code=400, detail="Parent object does not exist")
 
-    # Update fields if provided
     if object_data.name is not None:
         _object.name = object_data.name
 
@@ -134,13 +127,11 @@ def update_object(
 @router.post("/", status_code=201)
 async def create_object(object_data: ObjectCreate, db: Session = Depends(get_db)):
     try:
-        # Verify parent_id exists if provided
         if object_data.parent_id:
             parent = db.query(Object).filter(Object.id == object_data.parent_id).first()
             if not parent:
                 raise HTTPException(status_code=400, detail=f"Parent object with id {object_data.parent_id} not found")
 
-        # Create new object
         new_object = Object(
             name=object_data.name,
             type=object_data.type,
@@ -164,20 +155,16 @@ def delete_object(
         object_id: int = Path(..., title="The ID of the object to delete"),
         db: Session = Depends(get_db)
 ):
-    """Delete an object and all its children (cascade)"""
-    # Get object
     _object = db.query(Object).filter(Object.id == object_id).first()
     if not _object:
         raise HTTPException(status_code=404, detail="Object not found")
 
-    # Delete object (cascade will handle children and datapoints)
     db.delete(_object)
     db.commit()
 
     return None
 
 
-# POST endpoint to create a datapoint under a specific object
 @router.post("/{object_id}/datapoint/", response_model=DatapointResponse, status_code=201)
 async def create_datapoint(
         object_id: int,
@@ -185,7 +172,6 @@ async def create_datapoint(
         db: Session = Depends(get_db)
 ):
     try:
-        # Create the datapoint
         new_datapoint = Datapoint(
             name=datapoint_data.name,
             value=datapoint_data.value,
@@ -195,15 +181,13 @@ async def create_datapoint(
         )
 
         db.add(new_datapoint)
-        db.flush()  # Get the ID before committing
+        db.flush()
 
-        # Associate with the specified object
         update_object_association(db, new_datapoint.id, object_id)
 
         db.commit()
         db.refresh(new_datapoint)
 
-        # Return with associated object ID
         return DatapointResponse(
             id=new_datapoint.id,
             name=new_datapoint.name,

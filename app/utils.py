@@ -82,7 +82,7 @@ def build_tree_with_node_datapoints(objects_list, nodes_with_datapoints: List, p
     tree = []
     for obj in objects_list:
         if obj['parent_id'] == parent_id:
-            # Create node
+            # create node
             node = {
                 'id': obj['id'],
                 'name': obj['name'],
