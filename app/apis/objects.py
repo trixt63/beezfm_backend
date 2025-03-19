@@ -224,7 +224,6 @@ async def create_datapoint(
         raise HTTPException(status_code=500, detail=f"Error creating datapoint: {str(e)}")
 
 
-
 @router.get("/query/{object_id}/{path:path}")
 async def query_path(object_id: int, path: str, db: Session = Depends(get_db)):
     try:
