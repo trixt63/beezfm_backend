@@ -2,7 +2,7 @@ import json
 
 from fastapi import APIRouter, HTTPException, Depends, Query, Path
 from sqlalchemy.orm import Session
-from sqlalchemy import func, text, case
+from sqlalchemy import text
 from typing import List, Dict, Optional
 from datetime import datetime
 
@@ -14,18 +14,16 @@ from app.models.pydantic_models import (
     DatapointResponse, DatapointCreate
 )
 
-from app.utils import build_tree, build_subtree_with_datapoints, resolve_path_by_type, update_object_association
+from app.utils import build_tree, build_subtree_with_datapoints, update_object_association, resolve_relative_path, build_tree_with_node_datapoints
 
 router = APIRouter(prefix="/api/objects")
 
 
 @router.get("/tree")
-def get_objects(
+def get_objects_tree(
         db: Session = Depends(get_db)
 ):
-    """
-    Get objects with optional filtering by parent_id or type.
-    If parent_id is not provided, returns top-level objects.
+    """Get the tree hierarchy of objects
     """
     _query_all_objects = """SELECT
         id,
@@ -40,9 +38,9 @@ def get_objects(
     """
     objects_result = db.execute(text(_query_all_objects))
     objects = [dict(row) for row in objects_result.mappings()]
-    hierarchy = build_tree(objects)
+    tree = build_tree(objects)
 
-    return hierarchy
+    return tree
 
 
 @router.get("/{object_id}")
@@ -52,9 +50,6 @@ def get_object(
         include_datapoints: bool = True,
         db: Session = Depends(get_db)
 ):
-    """
-    Get a specific object by ID with optional inclusion of children and datapoints.
-    """
     _object = db.query(Object).filter(Object.id == object_id).first()
 
     if not _object:
@@ -70,12 +65,10 @@ def get_object(
         "updated_at": _object.updated_at
     }
 
-    # Include children if requested
     if include_children:
         children = db.query(Object).filter(Object.parent_id == object_id).all()
         result["children"] = children
 
-    # Include datapoints if requested
     if include_datapoints:
         _datapoint_query = f"""select d.id, d.name, d.value, d.unit, d.type from "object" o
                     join object_datapoint od on o.id = od."object_FK"
@@ -89,13 +82,13 @@ def get_object(
 
     return result
 
+
 @router.put("/{object_id}") # , response_model=ObjectInDB)
 def update_object(
         object_id: int = Path(..., title="The ID of the object to update"),
         object_data: ObjectUpdate = None,
         db: Session = Depends(get_db)
 ):
-    """Update an existing object"""
     _object = db.query(Object).filter(Object.id == object_id).first()
     if not _object:
         raise HTTPException(status_code=404, detail="Object not found")
@@ -109,7 +102,6 @@ def update_object(
             if not parent:
                 raise HTTPException(status_code=400, detail="Parent object does not exist")
 
-    # Update fields if provided
     if object_data.name is not None:
         _object.name = object_data.name
 
@@ -130,16 +122,14 @@ def update_object(
     return _object
 
 
-@router.post("/objects/", status_code=201)
+@router.post("/", status_code=201)
 async def create_object(object_data: ObjectCreate, db: Session = Depends(get_db)):
     try:
-        # Verify parent_id exists if provided
         if object_data.parent_id:
             parent = db.query(Object).filter(Object.id == object_data.parent_id).first()
             if not parent:
                 raise HTTPException(status_code=400, detail=f"Parent object with id {object_data.parent_id} not found")
 
-        # Create new object
         new_object = Object(
             name=object_data.name,
             type=object_data.type,
@@ -163,20 +153,16 @@ def delete_object(
         object_id: int = Path(..., title="The ID of the object to delete"),
         db: Session = Depends(get_db)
 ):
-    """Delete an object and all its children (cascade)"""
-    # Get object
     _object = db.query(Object).filter(Object.id == object_id).first()
     if not _object:
         raise HTTPException(status_code=404, detail="Object not found")
 
-    # Delete object (cascade will handle children and datapoints)
     db.delete(_object)
     db.commit()
 
     return None
 
 
-# POST endpoint to create a datapoint under a specific object
 @router.post("/{object_id}/datapoint/", response_model=DatapointResponse, status_code=201)
 async def create_datapoint(
         object_id: int,
@@ -184,7 +170,6 @@ async def create_datapoint(
         db: Session = Depends(get_db)
 ):
     try:
-        # Create the datapoint
         new_datapoint = Datapoint(
             name=datapoint_data.name,
             value=datapoint_data.value,
@@ -194,15 +179,13 @@ async def create_datapoint(
         )
 
         db.add(new_datapoint)
-        db.flush()  # Get the ID before committing
+        db.flush()
 
-        # Associate with the specified object
         update_object_association(db, new_datapoint.id, object_id)
 
         db.commit()
         db.refresh(new_datapoint)
 
-        # Return with associated object ID
         return DatapointResponse(
             id=new_datapoint.id,
             name=new_datapoint.name,
@@ -223,157 +206,74 @@ async def create_datapoint(
         raise HTTPException(status_code=500, detail=f"Error creating datapoint: {str(e)}")
 
 
-# @router.get("/{object_id}/path", response_model=Dict[str, str])
-# def get_object_path(
-#         object_id: int = Path(..., title="The ID of the object to get path for"),
-#         db: Session = Depends(get_db)
-# ):
-#     """Get the full hierarchical path for an object (e.g., Hotel.Floor.Room)"""
-#     # Check if object exists
-#     object = db.query(Object).filter(Object.id == object_id).first()
-#     if not object:
-#         raise HTTPException(status_code=404, detail="Object not found")
-#
-#     # Use a raw SQL query with a recursive CTE to get the path
-#     # SQLAlchemy Core doesn't directly support recursive CTEs
-#     query = text("""
-#     WITH RECURSIVE object_path AS (
-#         SELECT id, name, parent_object_id, ARRAY[name] as path
-#         FROM objects
-#         WHERE id = :object_id
-#
-#         UNION ALL
-#
-#         SELECT o.id, o.name, o.parent_object_id, o.name || op.path
-#         FROM objects o
-#         JOIN object_path op ON o.id = op.parent_object_id
-#     )
-#     SELECT array_to_string(path, '.') as full_path
-#     FROM object_path
-#     WHERE parent_object_id IS NULL
-#     """)
-#
-#     result = db.execute(query, {"object_id": object_id}).first()
-#
-#     if not result or not result.full_path:
-#         raise HTTPException(status_code=404, detail="Object path not found")
-#
-#     return {"path": result.full_path}
-
-GET_OBJECT_SUBTREE = """
-    WITH RECURSIVE object_hierarchy AS (
-        SELECT 
-            o.id,
-            o.name,
-            o.type,
-            o.parent_id,
-            o.location_details
-        FROM public."object" o
-        WHERE o.id = :object_id
-        UNION ALL
-        SELECT 
-            o.id,
-            o.name,
-            o.type,
-            o.parent_id,
-            o.location_details FROM public."object" o
-        INNER JOIN object_hierarchy oh ON o.parent_id = oh.id
-    )
-    SELECT 
-        oh.id,
-        oh.name,
-        oh.type,
-        oh.parent_id,
-        oh.location_details,
-        d.id as datapoint_id,
-        d.name as datapoint_name,
-        d.type as datapoint_type,
-        d.value,
-        d.unit,
-        d.is_fresh,
-        d.created_at,
-        d.updated_at
-    FROM object_hierarchy oh
-    LEFT JOIN public.object_datapoint od ON oh.id = od."object_FK"
-    LEFT JOIN public.datapoint d ON od."datapoint_FK" = d.id
-    ORDER BY oh.id;
-"""
-
-_floor2 = json.loads('''
-{
-  "id": 5,
-  "name": "Floor 2",
-  "type": "floor",
-  "location_details": {
-    "elevation": "5 meters",
-    "description": "Guest rooms"
-  },
-  "parent_object_id": 1,
-  "created_at": "2025-03-17T03:11:49.632979+00:00",
-  "updated_at": "2025-03-17T03:11:49.632979+00:00",
-  "datapoints": [
-    {
-      "id": 33,
-      "name": "Noise Level",
-      "value": "50",
-      "unit": "dB",
-      "type": "noiseLevel"
-    }
-  ]
-}
-''')
-_floor3 = json.loads('''
-{
-  "id": 6,
-  "name": "Floor 3",
-  "type": "floor",
-  "location_details": {
-    "elevation": "10 meters",
-    "description": "Suites and conference rooms"
-  },
-  "parent_object_id": 1,
-  "created_at": "2025-03-17T03:11:49.632979+00:00",
-  "updated_at": "2025-03-17T03:11:49.632979+00:00",
-  "datapoints": [
-    {
-      "id": 34,
-      "name": "Noise Level",
-      "value": "40",
-      "unit": "dB",
-      "type": "noiseLevel"
-    }
-  ]
-}
-''')
 @router.get("/query/{object_id}/{path:path}")
-async def query_subtree(object_id: int, path: str, db: Session = Depends(get_db)):
+async def query_path(object_id: int, path: str, db: Session = Depends(get_db)):
     try:
-        # Fetch subtree starting from the given object_id
-        subtree_res = db.execute(text(GET_OBJECT_SUBTREE), {"object_id": object_id})
+        # fetch subtree starting from object_id and path
+        query_subtree = """
+            WITH RECURSIVE object_hierarchy AS (
+                SELECT 
+                    o.id,
+                    o.name,
+                    o.type,
+                    o.parent_id,
+                    o.location_details
+                FROM public."object" o
+                WHERE o.id = :object_id
+                UNION ALL
+                SELECT 
+                    o.id,
+                    o.name,
+                    o.type,
+                    o.parent_id,
+                    o.location_details FROM public."object" o
+                INNER JOIN object_hierarchy oh ON o.parent_id = oh.id
+            )
+            SELECT 
+                oh.id,
+                oh.name,
+                oh.type,
+                oh.parent_id,
+                oh.location_details,
+                d.id as datapoint_id,
+                d.name as datapoint_name,
+                d.type as datapoint_type,
+                d.value,
+                d.unit,
+                d.is_fresh,
+                d.created_at,
+                d.updated_at
+            FROM object_hierarchy oh
+            LEFT JOIN public.object_datapoint od ON oh.id = od."object_FK"
+            LEFT JOIN public.datapoint d ON od."datapoint_FK" = d.id
+            ORDER BY oh.id;
+        """
+        subtree_res = db.execute(text(query_subtree), {"object_id": object_id})
         objects = [dict(row) for row in subtree_res.mappings()]
-
         if not objects:
             raise HTTPException(status_code=404, detail=f"Object with id {object_id} not found")
 
-        # Build the subtree starting from the root object
         subtree = build_subtree_with_datapoints(objects, object_id)
+        objects_with_datapoint = resolve_relative_path(subtree[0], path)
 
-        # Resolve the path within the subtree
-        # TODO: fix resolve_path_by_type
-        result = resolve_path_by_type(subtree, path)
-
-        if result is None:
-            raise HTTPException(status_code=404, detail=f"Path '{path}' not found in subtree of object {object_id}")
-
-        print(len(result))
-        # return result
+        # get full tree, but with only the datapoints in path
+        _query_all_objects = """SELECT
+            id,
+            name,
+            type,
+            parent_id
+        FROM public."object"
+        ORDER BY
+            CASE WHEN parent_id IS NULL THEN 0 ELSE 1 END,
+            parent_id,
+            id;
+        """
+        objects_result = db.execute(text(_query_all_objects))
+        objects = [dict(row) for row in objects_result.mappings()]
+        full_tree = build_tree_with_node_datapoints(objects, nodes_with_datapoints=objects_with_datapoint)
+        return full_tree
 
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-    return [_floor2, _floor3]
-
-# TODO: add get subtree api

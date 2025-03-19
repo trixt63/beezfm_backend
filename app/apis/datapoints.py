@@ -1,6 +1,4 @@
 from fastapi import APIRouter, HTTPException, Depends, Query, Path
-from typing import List, Optional
-from datetime import datetime
 
 from sqlalchemy.orm import Session
 
@@ -8,25 +6,21 @@ from app.database import get_db
 from app.models.sql_alchemy_models import Object, Datapoint, ObjectDatapoint
 from app.models.pydantic_models import DatapointCreate, DatapointUpdate, DatapointResponse
 
-router = APIRouter(prefix="/api/datapoints")
+router = APIRouter(prefix="/api/datapoint")
 
 
-# GET endpoint to retrieve a datapoint by ID
-@router.get("/{id}") #, response_model=DatapointResponse)
+@router.get("/{id}" , response_model=DatapointResponse)
 async def get_datapoint(id: int, db: Session = Depends(get_db)):
     try:
-        # Fetch the datapoint
         datapoint = db.query(Datapoint).filter(Datapoint.id == id).first()
         if not datapoint:
             raise HTTPException(status_code=404, detail=f"Datapoint with id {id} not found")
 
-        # Get associated object ID
         association = db.query(ObjectDatapoint).filter(
             ObjectDatapoint.datapoint_FK == datapoint.id
         ).first()
         object_id = association.object_FK if association else None
 
-        # Prepare response
         return DatapointResponse(
             id=datapoint.id,
             name=datapoint.name,
@@ -44,7 +38,7 @@ async def get_datapoint(id: int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving datapoint: {str(e)}")
 
-# PUT endpoint to update a datapoint (partial update)
+
 @router.put("/{id}", response_model=DatapointResponse)
 async def update_datapoint(
         id: int,
@@ -52,17 +46,14 @@ async def update_datapoint(
         db: Session = Depends(get_db)
 ):
     try:
-        # Fetch existing datapoint
         datapoint = db.query(Datapoint).filter(Datapoint.id == id).first()
         if not datapoint:
             raise HTTPException(status_code=404, detail=f"Datapoint with id {id} not found")
 
-        # Check if at least one field is provided
         if not any([datapoint_data.name, datapoint_data.value, datapoint_data.unit,
                     datapoint_data.is_fresh is not None, datapoint_data.type]):
             raise HTTPException(status_code=400, detail="At least one field must be provided for update")
 
-        # Update only fields that are not None in the request
         if datapoint_data.name is not None:
             datapoint.name = datapoint_data.name
         if datapoint_data.value is not None:
@@ -77,7 +68,6 @@ async def update_datapoint(
         db.commit()
         db.refresh(datapoint)
 
-        # Get associated object ID for response
         association = db.query(ObjectDatapoint).filter(
             ObjectDatapoint.datapoint_FK == datapoint.id
         ).first()
@@ -106,16 +96,14 @@ async def update_datapoint(
 @router.delete("/{id}", status_code=204)
 async def delete_datapoint(id: int, db: Session = Depends(get_db)):
     try:
-        # Fetch existing datapoint
         datapoint = db.query(Datapoint).filter(Datapoint.id == id).first()
         if not datapoint:
             raise HTTPException(status_code=404, detail=f"Datapoint with id {id} not found")
 
-        # Delete the datapoint (cascades to ObjectDatapoint due to ON DELETE CASCADE)
         db.delete(datapoint)
         db.commit()
 
-        return None  # 204 No Content
+        return None  # 204 no content
 
     except HTTPException as e:
         db.rollback()
