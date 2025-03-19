@@ -16,7 +16,7 @@ from app.models.pydantic_models import (
 
 from app.utils import build_tree, build_subtree_with_datapoints, update_object_association, resolve_relative_path
 
-router = APIRouter(prefix="/api/object")
+router = APIRouter(prefix="/api/objects")
 
 
 @router.get("/tree")
